@@ -7,7 +7,7 @@ app.use(express.json())
 
 const User = require('./models/users');
 const Group = require('./models/groups');
-const balance = require('./models/balance');
+const Balance = require('./models/balance');
 
 
 const dotenv = require("dotenv")
@@ -86,7 +86,39 @@ app.post('/user/join-group', async (req, res) => {
     }
 })
 
+app.post('/user/:group/balance', async (req, res) => {
+    try {
+        let {user} = req.body;
+        let group = req.params.group;
 
+        console.log(group);
+        
+        let {payment} = req.body;
+        
+        const freshUser = await User.findOne({name : user});
+        const oldGroup = await Group.findOne({title : group});
+
+        console.log(freshUser, oldGroup);
+        
+
+        const balance = await Balance.create({
+            user : freshUser._id,
+            group : oldGroup._id,
+            balance : payment
+        })
+
+        res.status(201).json({
+            status : 'success',
+            message : 'balance created',
+            balance
+        })
+    } catch(err) {
+        res.status(500).json({
+            status : 'fail',
+            message : 'server internal error!'
+        })
+    }
+})
 
 app.listen(3005, () => {
     console.log('splitwise server on port : 3005');
