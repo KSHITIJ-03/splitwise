@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 
 app.post('/user', async (req, res) => {
     try {
-        const user = await User.create({name, password});
+        const user = await User.create(req.body);
         res.status(201).json({
             status : 'success',
             message : 'user created',
@@ -39,8 +39,10 @@ app.post('/user/create-group', async (req, res) => {
         let { user, title } = req.body;
         
         const newGroup = await Group.create({title});
-        const freshUser = await User.find({name : user});
+        const freshUser = await User.findOne({name : user});
 
+        console.log(newGroup, freshUser);
+        
         newGroup.members.push(freshUser._id);
         freshUser.groups.push(newGroup._id);
         await newGroup.save();
@@ -63,8 +65,8 @@ app.post('/user/join-group', async (req, res) => {
     try {
         let { user, title } = req.body;
         
-        const oldGroup = await Group.find({title});
-        const freshUser = await User.find({name : user});
+        const oldGroup = await Group.findOne({title});
+        const freshUser = await User.findOne({name : user});
 
         oldGroup.members.push(freshUser._id);
         freshUser.groups.push(oldGroup._id);
@@ -74,7 +76,7 @@ app.post('/user/join-group', async (req, res) => {
         res.status(201).json({
             status : 'success',
             message : 'group joined',
-            user
+            freshUser
         })
     } catch(err) {
         res.status(500).json({
@@ -83,6 +85,7 @@ app.post('/user/join-group', async (req, res) => {
         })
     }
 })
+
 
 
 app.listen(3005, () => {
