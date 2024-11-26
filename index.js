@@ -8,6 +8,7 @@ app.use(express.json())
 const User = require('./models/users');
 const Group = require('./models/groups');
 const Balance = require('./models/balance');
+const Transaction = require('./models/transactions')
 
 
 const dotenv = require("dotenv")
@@ -21,6 +22,9 @@ app.get('/', (req, res) => {
 app.post('/user', async (req, res) => {
     try {
         const user = await User.create(req.body);
+
+        //const transacrion = await Transaction.create()
+
         res.status(201).json({
             status : 'success',
             message : 'user created',
@@ -48,6 +52,12 @@ app.post('/user/create-group', async (req, res) => {
         await newGroup.save();
         await freshUser.save();
 
+        const transacrion = await Transaction.create({
+            user : freshUser._id,
+            group : newGroup._id
+        })
+
+
         res.status(201).json({
             status : 'success',
             message : 'group created',
@@ -72,6 +82,14 @@ app.post('/user/join-group', async (req, res) => {
         freshUser.groups.push(oldGroup._id);
         await oldGroup.save();
         await freshUser.save();
+
+        const transaction = await Transaction.create({
+            user : freshUser._id,
+            group : oldGroup._id
+        })
+
+        console.log(transaction);
+        
 
         res.status(201).json({
             status : 'success',
@@ -119,6 +137,57 @@ app.post('/user/:group/balance', async (req, res) => {
         })
     }
 })
+
+// make payment
+
+app.post('/user/:group/payment', async (req, res) => {
+    try {
+        let {user, payment, name} = req.body;
+        let group = req.params.group;
+
+        console.log(group);
+        
+        const freshUser = await User.findOne({name : user});
+        const oldGroup = await Group.findOne({title : group});
+
+        console.log(freshUser, oldGroup);
+        
+        let credits = oldGroup.members;
+
+        console.log(credits, payment);
+
+
+        for(let i = 0; i < credits.length; i++) {
+            let transactions = await Transaction.findById(credits[i]);
+            transactions.transaction.push({
+                name,
+                owe : freshUser._id,
+                amount : payment/credits.length
+            })
+            await transactions.save();
+        }
+        
+
+        // const balance = await Balance.create({
+        //     user : freshUser._id,
+        //     group : oldGroup._id,
+        //     balance : payment
+            
+        // })
+
+        res.status(201).json({
+            status : 'success',
+            message : 'balance created'
+            //balance
+        })
+    } catch(err) {
+        res.status(500).json({
+            status : 'fail',
+            message : 'server internal error!'
+        })
+    }
+})
+
 
 app.listen(3005, () => {
     console.log('splitwise server on port : 3005');

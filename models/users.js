@@ -6,6 +6,14 @@ const userSchema = new mongoose.Schema({
     groups : [{
         type : mongoose.Schema.Types.ObjectId,
         ref : 'groups'
+    }],
+    transaction : [{
+        name : String,
+        owe : {
+            type : mongoose.Schema.Types.ObjectId,
+            ref : 'User'
+        },
+        amount : Number
     }]
 })
 

@@ -9,7 +9,11 @@ const balanceSchema = new mongoose.Schema({
         type : mongoose.Schema.Types.ObjectId,
         ref : 'Group'
     },
-    balance : Number
+    balance : Number,
+    transaction : [{
+        name : String,
+        amount : Number
+    }]
 })
 
 const Balance = new mongoose.model('Balance', balanceSchema)
