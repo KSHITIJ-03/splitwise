@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const app = express();
 const path = require("path")
 const bodyParser = require('body-parser');
+const morgan = require('morgan');
+app.use(morgan("dev"))
 app.use(express.json())
 
 const User = require('./models/users');
@@ -149,22 +151,23 @@ app.post('/user/:group/payment', async (req, res) => {
         
         const freshUser = await User.findOne({name : user});
         const oldGroup = await Group.findOne({title : group});
-
-        console.log(freshUser, oldGroup);
         
         let credits = oldGroup.members;
-
-        console.log(credits, payment);
-
+        credits = credits.filter(member => member.toString() != freshUser._id.toString());
 
         for(let i = 0; i < credits.length; i++) {
-            let transactions = await Transaction.findById(credits[i]);
-            transactions.transaction.push({
-                name,
-                owe : freshUser._id,
-                amount : payment/credits.length
+            let transactions = await Transaction.findOneAndUpdate({user : credits[i], group : oldGroup._id}, {
+                $addToSet : {
+                    transaction : {
+                        name,
+                        owe : freshUser._id,
+                        amount : payment/credits.length
+                    }
+                }
+            },
+            { 
+                new : true
             })
-            await transactions.save();
         }
         
 
