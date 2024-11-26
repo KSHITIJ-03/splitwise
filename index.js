@@ -9,7 +9,6 @@ app.use(express.json())
 
 const User = require('./models/users');
 const Group = require('./models/groups');
-const Balance = require('./models/balance');
 const Transaction = require('./models/transactions')
 
 
@@ -106,40 +105,6 @@ app.post('/user/join-group', async (req, res) => {
     }
 })
 
-app.post('/user/:group/balance', async (req, res) => {
-    try {
-        let {user} = req.body;
-        let group = req.params.group;
-
-        console.log(group);
-        
-        let {payment} = req.body;
-        
-        const freshUser = await User.findOne({name : user});
-        const oldGroup = await Group.findOne({title : group});
-
-        console.log(freshUser, oldGroup);
-        
-
-        const balance = await Balance.create({
-            user : freshUser._id,
-            group : oldGroup._id,
-            balance : payment
-        })
-
-        res.status(201).json({
-            status : 'success',
-            message : 'balance created',
-            balance
-        })
-    } catch(err) {
-        res.status(500).json({
-            status : 'fail',
-            message : 'server internal error!'
-        })
-    }
-})
-
 // make payment
 
 app.post('/user/:group/payment', async (req, res) => {
@@ -183,6 +148,61 @@ app.post('/user/:group/payment', async (req, res) => {
             message : 'balance created'
             //balance
         })
+    } catch(err) {
+        res.status(500).json({
+            status : 'fail',
+            message : 'server internal error!'
+        })
+    }
+})
+
+app.get('/user/:group/status', async (req, res) => {
+    try {
+        let {user} = req.body;
+        let {group} = req.params;
+
+        const freshUser = await User.findOne({name : user});
+        const oldGroup = await Group.findOne({title : group});
+
+        //console.log(freshUser, oldGroup);
+        
+
+        // making final results // ----------------
+
+        let dues = await Transaction.find({user : freshUser._id, group : oldGroup._id}).populate({
+            path : 'transaction.owe',
+            select : 'name'
+        })
+
+        dues = dues.map(due => ({
+            transactions: due.transaction.map(tx => ({
+                name: tx.name,
+                owe: tx.owe.name,
+                amount: tx.amount,
+            }))
+        }));
+
+        //console.log(dues);
+
+        let new_dues = dues[0].transactions;
+
+        let total_dues = new_dues.reduce((acc, due) => {
+            return acc + due.amount;
+        }, 0)
+
+        /*
+        let total_dues = dues.reduce((acc, due) => {
+            return acc + due.transactions.reduce((subAcc, tx) => subAcc + tx.amount, 0);
+        }, 0);
+        */
+        
+        res.status(200).json({
+            status : 'succcess',
+            message : 'all the dues',
+            total_dues,
+            dues
+        })
+
     } catch(err) {
         res.status(500).json({
             status : 'fail',
