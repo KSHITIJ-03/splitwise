@@ -1,11 +1,19 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const app = express();
 const path = require("path")
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
+
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(morgan("dev"))
 app.use(express.json())
+
 
 const User = require('./models/users');
 const Group = require('./models/groups');
@@ -23,8 +31,6 @@ app.get('/', (req, res) => {
 app.post('/user', async (req, res) => {
     try {
         const user = await User.create(req.body);
-
-        //const transacrion = await Transaction.create()
 
         res.status(201).json({
             status : 'success',
@@ -120,12 +126,6 @@ app.post('/user/:group/payment', async (req, res) => {
         let credits = oldGroup.members;
         credits = credits.filter(member => member.toString() != freshUser._id.toString());
 
-
-        // total payments done by freshuser - total payments done by each user for this freshuser
-
-        
-
-
         for(let i = 0; i < credits.length; i++) {
             let transactions = await Transaction.findOneAndUpdate({user : credits[i], group : oldGroup._id}, {
                 $addToSet : {
@@ -140,15 +140,6 @@ app.post('/user/:group/payment', async (req, res) => {
                 new : true
             })
         }
-
-        // total_dues
-
-        // const balance = await Balance.create({
-        //     user : freshUser._id,
-        //     group : oldGroup._id,
-        //     balance : payment
-            
-        // })
 
         res.status(201).json({
             status : 'success',
@@ -278,9 +269,6 @@ async function grouping(user, group) {
 
     const dues = await Transaction.findOne({user, group});
 
-    //console.log(dues);
-        
-
     let transactions = dues.transaction;
 
     const grouped_tx = transactions.reduce((acc, item) => {
@@ -297,8 +285,6 @@ async function grouping(user, group) {
 
     const result = Object.values(grouped_tx);
 
-    //console.log(result);
-
     return result
 }
 
@@ -308,47 +294,34 @@ app.get('/user/:group/final-status', async(req, res) => {
 
         let group = await Group.findOne({title : req.params.group});
         let members = group.members;
-        //console.log(user, group);
+
         members = members.filter(member => member.toString() != user._id.toString());
 
-        //console.log(members);
-
         let grouped_txs = await grouping(user._id, group._id)
-        //console.log(grouped_txs);
 
         for(let i = 0; i < grouped_txs.length; i++) {
 
-            //console.log(grouped_txs[i]);
             let g2_txs = await grouping(grouped_txs[i].owe, group._id)
-            //console.log(g2_txs);
             
             let f = {amount : 0};
 
             for(let j = 0; j < g2_txs.length; j++) {
-
-                //console.log(g2_txs[j]);
                 
                 if(g2_txs[j].owe.toString() === user._id.toString()) {
-                    //console.log('found');
                     
                     f = g2_txs[j];
                     break;
                 }
             }
 
-            //console.log(f.amount, grouped_txs[i].amount);
-
             let t_user1 = await User.findById(grouped_txs[i].owe)
             let t_user2 = await User.findById(f.owe)
-
-            //console.log(t_user1.name, t_user2.name);
-            
             
 
             if(f.amount > grouped_txs[i].amount) {
                 console.log(t_user1.name + ' will give : ' + (f.amount - grouped_txs[i].amount) + ' to ' +  t_user2.name);
             } else if(f.amount < grouped_txs[i].amount) {
-                console.log(t_user1.name + ' will take : ' + Math.abs(f.amount - grouped_txs[i].amount) + ' to ' +  t_user2.name);
+                console.log(t_user1.name + ' will take : ' + Math.abs(f.amount - grouped_txs[i].amount) + ' from ' +  t_user2.name);
             } else {
                 console.log('no one will give anything to anyone')
             }
@@ -384,5 +357,5 @@ const DB = process.env.DATABASE.replace("<password>", process.env.DATABASE_PASSW
 
 mongoose.connect(DB).then(con => {
     //console.log(con.connections);
-    console.log("databse connected");
+    console.log("database connected");
 })
