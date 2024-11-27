@@ -7,14 +7,15 @@ const userSchema = new mongoose.Schema({
         type : mongoose.Schema.Types.ObjectId,
         ref : 'groups'
     }],
-    transaction : [{
-        name : String,
-        owe : {
-            type : mongoose.Schema.Types.ObjectId,
-            ref : 'User'
-        },
-        amount : Number
-    }]
+    payments : {
+        type : [{
+            group : {
+                type : mongoose.Schema.Types.ObjectId,
+                ref : 'Group'
+            },
+            amount : Number
+        }]
+    }
 })
 
 const User = new mongoose.model('User', userSchema)
